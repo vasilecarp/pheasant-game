@@ -1,9 +1,11 @@
+// src/components/PheasantGame.js
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Heart, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
+import { getAIWord } from "../services/openai";
 
 const PheasantGame = () => {
   const [playerLives, setPlayerLives] = useState(5);
@@ -14,31 +16,6 @@ const PheasantGame = () => {
   const [message, setMessage] = useState("Your turn! Enter any word to start.");
   const [loading, setLoading] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-
-  // Mock AI response - In real implementation, this would call an LLM API
-  const getAIResponse = async (lastWord) => {
-    setLoading(true);
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // This is where you would integrate with an actual LLM API
-    // For demo purposes, using a simple array of words
-    const mockWords = {
-      on: "only",
-      ly: "lyric",
-      ic: "icon",
-      er: "error",
-      or: "orange",
-      ge: "genre",
-      re: "ready",
-    };
-
-    const lastTwoLetters = lastWord.slice(-2);
-    const aiWord = mockWords[lastTwoLetters] || "";
-
-    setLoading(false);
-    return aiWord;
-  };
 
   const validateWord = (word) => {
     if (word.length < 3) {
@@ -77,17 +54,30 @@ const PheasantGame = () => {
     setGameHistory(newHistory);
     setCurrentWord("");
     setIsPlayerTurn(false);
+    setLoading(true);
 
-    // AI's turn
-    const aiResponse = await getAIResponse(currentWord);
+    try {
+      // Get AI's response
+      const aiWord = await getAIWord(currentWord);
 
-    if (!aiResponse) {
-      setAiLives(aiLives - 1);
-      setMessage("AI couldn't find a word! AI loses a life!");
-      setIsPlayerTurn(true);
-    } else {
-      setGameHistory([...newHistory, aiResponse]);
-      setMessage(`AI played: ${aiResponse}`);
+      if (!aiWord) {
+        setAiLives((prev) => prev - 1);
+        setMessage("AI couldn't find a word! AI loses a life!");
+      } else {
+        if (gameHistory.includes(aiWord)) {
+          setAiLives((prev) => prev - 1);
+          setMessage("AI used a repeated word! AI loses a life!");
+        } else {
+          setGameHistory([...newHistory, aiWord]);
+          setMessage(`AI played: ${aiWord}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error during AI turn:", error);
+      setAiLives((prev) => prev - 1);
+      setMessage("AI encountered an error! AI loses a life!");
+    } finally {
+      setLoading(false);
       setIsPlayerTurn(true);
     }
   };
@@ -161,7 +151,7 @@ const PheasantGame = () => {
               onClick={handlePlayerMove}
               disabled={!isPlayerTurn || gameOver || loading}
             >
-              Submit
+              {loading ? "AI Thinking..." : "Submit"}
             </Button>
           </div>
         </div>
