@@ -1,4 +1,3 @@
-// src/components/PheasantGame.js
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
