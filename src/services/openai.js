@@ -1,10 +1,14 @@
-// src/services/openai.js
 import OpenAI from "openai";
+
+console.log("API Key exists:", !!process.env.REACT_APP_OPENAI_API_KEY);
 
 const openai = new OpenAI({
   apiKey: process.env.REACT_APP_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
+
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const getAIWord = async (lastWord) => {
   if (!process.env.REACT_APP_OPENAI_API_KEY) {
@@ -13,6 +17,9 @@ export const getAIWord = async (lastWord) => {
   }
 
   try {
+    
+    await delay(1000); 
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -33,6 +40,15 @@ export const getAIWord = async (lastWord) => {
     return completion.choices[0].message.content.toLowerCase().trim();
   } catch (error) {
     console.error("Error getting AI response:", error);
+
+    // Handle rate limit errors specifically
+    if (error.status === 429) {
+      console.log(
+        "Rate limit reached. Please wait a moment before trying again."
+      );
+      
+      await delay(2000); // Wait 2 seconds before allowing next request
+    }
     return null;
   }
 };
